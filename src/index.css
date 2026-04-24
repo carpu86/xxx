@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -7,8 +8,9 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
+    --background: 240 10% 4%; /* matching zinc-950 */
     --foreground: 0 0% 98%;
+    /* other variables remain the same */
     --card: 240 10% 4.9%;
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
@@ -33,6 +35,12 @@
 body {
   @apply bg-background text-foreground;
   font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+.premium {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 /* Custom Scrollbar */

@@ -14,6 +14,16 @@ export interface Message {
   sender: 'user' | CharacterId;
   text: string;
   timestamp: number;
+  isRead?: boolean;
+  isEdited?: boolean;
+}
+
+export interface FetishData {
+  id: string;
+  name: string;
+  level: number;
+  lastTriggered: number;
+  synergy?: string[]; // Fetishes this interacts with
 }
 
 export interface StudioState {
@@ -22,9 +32,18 @@ export interface StudioState {
   memory: {
     [key in CharacterId]: {
       addiction: number;
-      discovered: string[];
+      discovered: string[]; // Keep for backward compatibility with backend
+      fetishes: Record<string, FetishData>; // Detailed tracking
+      combinations: string[]; // Newly discovered combos
       lastOutfit: string;
+      personalityShift: string[];
+      trustLevel: number;
     };
+  };
+  storyMode: {
+    active: boolean;
+    chapter: number;
+    variables: Record<string, number | string | boolean>;
   };
 }
 

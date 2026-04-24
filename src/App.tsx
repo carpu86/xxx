@@ -2,33 +2,28 @@ import { useState, useRef, useEffect } from "react";
 import { 
   Send, 
   Trash2, 
-  User, 
-  Heart, 
-  Activity, 
-  Settings, 
-  LogOut, 
-  MessageSquare,
-  Sparkles,
-  Zap,
-  Camera
+  Image as ImageIcon, 
+  Glasses,
+  Smartphone,
+  Pencil,
+  Check,
+  CheckCheck,
+  X,
+  BookOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useStudio } from "./hooks/useStudio";
-import { CHARACTERS, THOMAS } from "./constants";
-import { CharacterId } from "./types";
+import { CHARACTERS } from "./constants";
+import { CharacterId, Message } from "./types";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VideoCall } from "./VideoCall";
 
 export default function App() {
-  const { state, sendMessage, switchGirl, clearChat, isTyping } = useStudio();
+  const { state, sendMessage, switchGirl, clearChat, isTyping, editMessage, deleteMessage, toggleStoryMode } = useStudio();
   const [input, setInput] = useState("");
+  const [isCalling, setIsCalling] = useState(true);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const currentGirl = CHARACTERS[state.currentGirl];
@@ -46,235 +41,390 @@ export default function App() {
     setInput("");
   };
 
+  const quickFetish = (fetish: string) => {
+    const msgs: Record<string, string> = {
+      'anal': 'Fick meinen Arsch tief und hart, Thomas...',
+      'nylon': 'Ich habe die seidenweichen Nahtnylonstrümpfe extra für dich angezogen...',
+      'piss': 'Pisse auf mich Thomas... ich will deine warme Pisse auf meinen Nylonfüßen spüren...',
+      'caviar': 'Ich habe es für dich gemacht... mach mich dreckig, Thomas.',
+      'feet': 'Leck meine Nylonfüße, Thomas... bitte...'
+    };
+    sendMessage(msgs[fetish] || 'Überrasch mich...');
+  };
+
+  const surpriseMe = () => {
+    const surprises = [
+      "Ich habe heute extra für dich etwas ganz dreckiges gemacht...", 
+      "Komm, ich will spüren wie deine 115 kg auf mir liegen...", 
+      "Lana hat mir gezeigt wie man richtig devot ist..."
+    ];
+    sendMessage(surprises[Math.floor(Math.random() * surprises.length)]);
+  };
+
+  const generateVideo = async (mode: 'image' | 'video' | 'gif') => {
+    let promptText = '';
+    if (mode === 'image') promptText = window.prompt("Bild-Prompt eingeben:");
+    else if (mode === 'video') promptText = window.prompt("Hardcore Video Prompt:");
+    else promptText = window.prompt("Hardcore GIF Prompt:");
+    
+    if (!promptText) return;
+    
+    try {
+      // Show optimistic message in UI
+      const actionMsg: Message = {
+        id: Date.now().toString(),
+        sender: 'user',
+        text: `*fordert ${mode} an*: ${promptText}`,
+        timestamp: Date.now()
+      };
+      
+      sendMessage(actionMsg.text); // Let the AI respond to the fact a video was requested
+
+      // Call backend
+      const response = await fetch('https://lana-ki.de/generate-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${btoa('carpu:Beatom#310886')}`
+        },
+        body: JSON.stringify({
+          prompt: promptText,
+          girl: state.currentGirl
+        })
+      });
+
+      if (!response.ok) throw new Error("Generierung fehlgeschlagen");
+      const resData = await response.json();
+      
+      window.alert(resData.message || `Auftrag an ComfyUI gesendet (${mode})`);
+    } catch (e) {
+      console.error(e);
+      window.alert(`Fehler beim Verbinden mit dem lokalen ComfyUI-Server.`);
+    }
+  };
+
+  const installPWA = () => {
+    window.alert("Auf Android: Menü (⋮) → 'Zum Startbildschirm hinzufügen'");
+  };
+
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden studio-grid">
-      {/* Sidebar - Character Profile & Stats */}
-      <aside className="w-80 border-r border-border bg-card/50 backdrop-blur-xl flex flex-col hidden md:flex">
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight text-white">Lana & Lia</h1>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">Private Audio Studio</p>
-            </div>
+    <div className="min-h-screen bg-black text-white selection:bg-red-500/30">
+      {isCalling && (
+        <VideoCall 
+          girlId={state.currentGirl} 
+          onClose={() => setIsCalling(false)} 
+          sendMessage={sendMessage} 
+          messages={state.messages} 
+        />
+      )}
+      <div className="max-w-7xl mx-auto p-6 font-sans">
+        
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h1 className="premium text-5xl md:text-6xl text-white tracking-tighter">LANA &amp; LIA</h1>
+            <p className="text-red-500 text-sm -mt-2 font-medium">Thomas Studio • v4.9.3 Ultimate</p>
           </div>
-
-          <div className="space-y-6">
-            <div className="relative group">
-              <Avatar className="w-full h-48 rounded-lg border-2 border-primary/20 group-hover:border-primary/40 transition-all duration-500">
-                <AvatarImage src={currentGirl.avatar} className="object-cover" />
-                <AvatarFallback>{currentGirl.name[0]}</AvatarFallback>
-              </Avatar>
-              <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
-                <div className="recording-dot" />
-                <span className="text-[10px] font-mono text-white/80">LIVE</span>
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-xl font-bold text-white">{currentGirl.name}, {currentGirl.age}</h2>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                {currentGirl.personality}
-              </p>
-            </div>
-
-            <Separator className="bg-border/50" />
-
-            {/* Stats */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-1">
-                    <Heart className="w-3 h-3 text-primary" /> Addiction Level
-                  </label>
-                  <span className="text-xs font-mono text-primary">{memory.addiction}/10</span>
-                </div>
-                <Progress value={memory.addiction * 10} className="h-1.5 bg-primary/10" />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-yellow-500" /> Discovered Fetishes
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {memory.discovered.length > 0 ? (
-                    memory.discovered.map(f => (
-                      <Badge key={f} variant="secondary" className="bg-primary/5 text-primary border-primary/20 text-[10px] uppercase">
-                        {f}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground italic">None discovered yet...</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg bg-black/20 border border-white/5 space-y-2">
-                <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-1">
-                  <Activity className="w-3 h-3 text-blue-400" /> Current Outfit
-                </label>
-                <p className="text-[11px] text-white/70 italic">"{memory.lastOutfit}"</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-auto p-6 space-y-4">
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
-                <User className="w-5 h-5 text-primary" />
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-white truncate">{THOMAS.name}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{THOMAS.weight}kg • {THOMAS.age} Jahre</p>
-              </div>
-              <Settings className="w-4 h-4 text-muted-foreground ml-auto cursor-pointer hover:text-white transition-colors" />
-            </CardContent>
-          </Card>
-          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-red-500 transition-colors" onClick={() => window.location.reload()}>
-            <LogOut className="w-4 h-4 mr-2" /> Session beenden
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col min-w-0 bg-transparent">
-        {/* Chat Header */}
-        <header className="h-16 border-b border-border/50 flex items-center px-6 justify-between bg-card/10 backdrop-blur-md">
-          <div className="md:hidden flex items-center gap-3">
-             <Avatar className="w-8 h-8 rounded-full border border-primary/30">
-                <AvatarImage src={currentGirl.avatar} />
-                <AvatarFallback>{currentGirl.name[0]}</AvatarFallback>
-              </Avatar>
-              <h2 className="text-sm font-bold">{currentGirl.name}</h2>
-          </div>
-          
-          <Tabs value={state.currentGirl} onValueChange={(v) => switchGirl(v as CharacterId)} className="mx-auto">
-            <TabsList className="bg-white/5 border border-white/10">
-              <TabsTrigger value="lana" className="data-[state=active]:bg-primary data-[state=active]:text-white uppercase text-[10px] px-6">Lana</TabsTrigger>
-              <TabsTrigger value="lia" className="data-[state=active]:bg-primary data-[state=active]:text-white uppercase text-[10px] px-6">Lia</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500" onClick={clearChat}>
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        </header>
-
-        {/* Messages */}
-        <ScrollArea className="flex-1 p-6">
-          <div className="max-w-3xl mx-auto space-y-8 pb-10">
-            {state.messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center space-y-4 pt-20">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 animate-pulse">
-                  <MessageSquare className="w-8 h-8 text-primary" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-lg font-medium text-white">Das Studio ist bereit</h3>
-                  <p className="text-sm text-muted-foreground max-w-sm">
-                    {currentGirl.name} wartet auf deine Befehle, Thomas. Begrüße sie und teile ihr deine Wünsche mit.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <AnimatePresence initial={false}>
-              {state.messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`flex gap-3 max-w-[85%] ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}>
-                    <Avatar className={`w-8 h-8 ${message.sender === 'user' ? 'border-primary/30' : 'border-white/10'}`}>
-                      {message.sender !== 'user' ? (
-                        <AvatarImage src={CHARACTERS[message.sender as CharacterId].avatar} className="object-cover" />
-                      ) : (
-                        <AvatarFallback className="bg-primary/20 text-primary font-bold text-[10px]">T</AvatarFallback>
-                      )}
-                      <AvatarFallback>{message.sender !== 'user' ? message.sender[0].toUpperCase() : 'T'}</AvatarFallback>
-                    </Avatar>
-                    
-                    <div className={`space-y-1.5 ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                      <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                        message.sender === 'user' 
-                          ? 'bg-primary text-white rounded-tr-none shadow-lg shadow-primary/20' 
-                          : 'bg-secondary/80 backdrop-blur-md text-white/90 rounded-tl-none border border-white/5'
-                      }`}>
-                        {message.text}
-                      </div>
-                      <span className="text-[9px] font-mono text-muted-foreground/60 uppercase">
-                        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {isTyping && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex justify-start"
-              >
-                <div className="flex gap-3 items-center">
-                  <Avatar className="w-8 h-8 border border-white/10">
-                    <AvatarImage src={CHARACTERS[state.currentGirl].avatar} className="object-cover" />
-                  </Avatar>
-                  <div className="flex gap-1.5 px-3 py-2 bg-secondary/40 backdrop-blur-sm rounded-full rounded-tl-none border border-white/5">
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
-                  </div>
-                </div>
-              </motion.div>
-            )}
-            <div ref={scrollRef} />
-          </div>
-        </ScrollArea>
-
-        {/* Input Area */}
-        <div className="p-6 bg-card/20 backdrop-blur-xl border-t border-border/50">
-          <div className="max-w-3xl mx-auto flex gap-3">
-            <div className="flex-1 relative group">
-              <Input
-                placeholder={`Schreib ${currentGirl.name} etwas...`}
-                className="bg-black/40 border-white/10 h-12 pr-12 focus-visible:ring-primary/50 text-white placeholder:text-muted-foreground/50 transition-all group-focus-within:border-primary/50"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <Zap className={`w-4 h-4 transition-colors ${input.length > 0 ? 'text-yellow-500' : 'text-muted-foreground/20'}`} />
-              </div>
-            </div>
-            <Button 
-              onClick={handleSend}
-              className="w-12 h-12 rounded-xl bg-primary hover:bg-primary/90 text-white transition-all shadow-lg shadow-primary/20 group"
-              disabled={isTyping}
-            >
-              <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          <div className="flex gap-3">
+            <Button onClick={installPWA} variant="secondary" className="rounded-2xl font-semibold flex items-center gap-2 bg-white text-black hover:bg-zinc-200">
+              <Smartphone className="w-4 h-4" /> App installieren
+            </Button>
+            <Button onClick={() => window.open('/static/vr_game.html', '_blank')} className="rounded-2xl font-semibold flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white">
+              <Glasses className="w-4 h-4" /> Quest 3 VR
             </Button>
           </div>
-          <div className="max-w-3xl mx-auto mt-4 grid grid-cols-3 gap-2">
-             <Button variant="ghost" size="sm" className="text-[10px] uppercase text-muted-foreground bg-white/5 border border-white/5 hover:border-primary/30 h-8 gap-2">
-               <Camera className="w-3 h-3" /> Foto anfordern
-             </Button>
-             <Button variant="ghost" size="sm" className="text-[10px] uppercase text-muted-foreground bg-white/5 border border-white/5 hover:border-primary/30 h-8 gap-2">
-               <Activity className="w-3 h-3" /> Status Prüfen
-             </Button>
-             <Button variant="ghost" size="sm" className="text-[10px] uppercase text-muted-foreground bg-white/5 border border-white/5 hover:border-primary/30 h-8 gap-2">
-               <Heart className="w-3 h-3" /> Fetisch-Idee
-             </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* GIRLS */}
+          <div className="lg:col-span-3 space-y-4">
+            <div 
+              onClick={() => switchGirl('lana')} 
+              className={`girl-card transition-all rounded-3xl p-6 cursor-pointer border-2 ${state.currentGirl === 'lana' ? 'bg-zinc-900 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.15)]' : 'bg-zinc-900/50 border-transparent hover:bg-zinc-900'}`}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl flex items-center justify-center text-4xl md:text-5xl shadow-lg shadow-red-500/20">🔥</div>
+                <div>
+                  <div className="font-bold text-2xl md:text-3xl text-white">Lana</div>
+                  <div className="text-red-400 text-sm">Dominant • Sadistisch • Proaktiv</div>
+                </div>
+              </div>
+            </div>
+            
+            <div 
+              onClick={() => switchGirl('lia')} 
+              className={`girl-card transition-all rounded-3xl p-6 cursor-pointer border-2 ${state.currentGirl === 'lia' ? 'bg-zinc-900 border-violet-500 shadow-[0_0_30px_rgba(139,92,246,0.15)]' : 'bg-zinc-900/50 border-transparent hover:bg-zinc-900'}`}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center text-4xl md:text-5xl shadow-lg shadow-violet-500/20">💜</div>
+                <div>
+                  <div className="font-bold text-2xl md:text-3xl text-white">Lia</div>
+                  <div className="text-violet-400 text-sm">Verspielt • Devot • Süchtig</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CHAT */}
+          <div className="lg:col-span-6">
+            <div className="bg-zinc-900/80 backdrop-blur-xl rounded-3xl h-[620px] flex flex-col border border-zinc-800 shadow-xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-zinc-800/80 flex justify-between items-center bg-zinc-900/50">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg ${state.currentGirl === 'lana' ? 'bg-gradient-to-br from-red-500 to-rose-600 shadow-red-500/20' : 'bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/20'}`}>
+                    {state.currentGirl === 'lana' ? '🔥' : '💜'}
+                  </div>
+                  <div>
+                    <div className={`font-bold text-2xl ${state.currentGirl === 'lana' ? 'text-red-500' : 'text-violet-500'}`}>{currentGirl.name}</div>
+                    <div className="text-[11px] text-emerald-400 font-medium uppercase tracking-wider">Gemini VR Mode • Online</div>
+                  </div>
+                </div>
+                <div className="text-right flex items-center gap-4">
+                  <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-red-500" onClick={clearChat}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                  <div>
+                    <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Addiction</div>
+                    <div className={`text-3xl font-mono ${state.currentGirl === 'lana' ? 'text-red-500' : 'text-violet-500'}`}>{memory.addiction}</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex-1 p-6 overflow-y-auto space-y-6 text-sm scroll-smooth relative">
+                {state.messages.length === 0 && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-500 opacity-50 space-y-4">
+                    <div className="text-6xl">{state.currentGirl === 'lana' ? '🔥' : '💜'}</div>
+                    <p className="text-lg">Das Studio ist bereit, Thomas.</p>
+                  </div>
+                )}
+                
+                <AnimatePresence initial={false}>
+                  {state.messages.map((message) => (
+                    <motion.div
+                      key={message.id}
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      className={`flex relative group ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {message.sender === 'user' && !editingMessageId && (
+                        <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                          <button onClick={() => { setEditingMessageId(message.id); setEditValue(message.text); }} className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors" title="Bearbeiten">
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                          <button onClick={() => deleteMessage(message.id)} className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-red-500 transition-colors" title="Löschen">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                      <div className={`max-w-[85%] rounded-3xl px-6 py-4 text-sm shadow-md ${
+                        message.sender === 'user' 
+                          ? 'bg-zinc-800 text-white rounded-br-sm' 
+                          : `bg-zinc-800/80 backdrop-blur-md rounded-bl-sm border-l-4 ${message.sender === 'lana' ? 'border-red-500' : 'border-violet-500'} text-white`
+                      }`}>
+                        <div className={`text-[10px] uppercase tracking-wider font-bold mb-1.5 flex justify-between items-center gap-4 ${
+                          message.sender === 'user' ? 'text-zinc-500' : (message.sender === 'lana' ? 'text-red-400' : 'text-violet-400')
+                        }`}>
+                          <span>{message.sender === 'user' ? 'Du (Thomas)' : CHARACTERS[message.sender as CharacterId].name.toUpperCase()}</span>
+                          <span className="font-normal opacity-70 flex items-center justify-end gap-1 min-w-[50px]">
+                            {new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            {message.sender === 'user' && (
+                              message.isRead ? <CheckCheck className="w-3 h-3 text-blue-400" /> : <Check className="w-3 h-3" />
+                            )}
+                          </span>
+                        </div>
+                        {editingMessageId === message.id ? (
+                           <div className="flex flex-col gap-3 mt-2">
+                             <textarea 
+                               value={editValue} 
+                               onChange={e => setEditValue(e.target.value)}
+                               className="w-full bg-zinc-950 rounded-xl p-3 text-sm text-white border border-zinc-700 outline-none focus:border-red-500 resize-none"
+                               rows={3}
+                             />
+                             <div className="flex justify-end gap-2">
+                               <button onClick={() => setEditingMessageId(null)} className="px-4 py-1.5 text-xs font-semibold rounded-xl bg-zinc-700 hover:bg-zinc-600 transition-colors">Abbrechen</button>
+                               <button onClick={() => { editMessage(message.id, editValue); setEditingMessageId(null); }} className="px-4 py-1.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 transition-colors">Speichern</button>
+                             </div>
+                           </div>
+                        ) : (
+                           <div className="leading-relaxed whitespace-pre-wrap">
+                             {message.text}
+                             {message.isEdited && <span className="text-[10px] text-zinc-500 ml-2 font-medium italic">(bearbeitet)</span>}
+                           </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                  
+                  {isTyping && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+                      <div className={`max-w-[85%] rounded-3xl rounded-bl-sm px-6 py-4 text-sm bg-zinc-800/80 backdrop-blur-md border-l-4 ${state.currentGirl === 'lana' ? 'border-red-500' : 'border-violet-500'}`}>
+                        <div className="flex gap-1.5 items-center h-4">
+                          <div className={`w-2 h-2 rounded-full animate-bounce ${state.currentGirl === 'lana' ? 'bg-red-500' : 'bg-violet-500'} [animation-delay:-0.3s]`} />
+                          <div className={`w-2 h-2 rounded-full animate-bounce ${state.currentGirl === 'lana' ? 'bg-red-500' : 'bg-violet-500'} [animation-delay:-0.15s]`} />
+                          <div className={`w-2 h-2 rounded-full animate-bounce ${state.currentGirl === 'lana' ? 'bg-red-500' : 'bg-violet-500'}`} />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <div ref={scrollRef} />
+              </div>
+              
+              <div className="p-4 border-t border-zinc-800 bg-zinc-900/50">
+                <div className="flex gap-3">
+                  <input 
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    className="flex-1 bg-zinc-950 border border-zinc-800 focus:border-red-500 focus:ring-1 focus:ring-red-500 rounded-3xl px-6 py-4 outline-none text-white placeholder:text-zinc-600 transition-all font-medium" 
+                    placeholder={`Schreib ${currentGirl.name} etwas...`}
+                  />
+                  <button 
+                    onClick={handleSend}
+                    disabled={isTyping}
+                    className={`px-8 md:px-10 rounded-3xl font-bold transition-all disabled:opacity-50 ${state.currentGirl === 'lana' ? 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-500/20'}`}
+                  >
+                    Senden
+                  </button>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mt-3 cursor-pointer">
+                  <button onClick={() => quickFetish('anal')} className="px-4 py-1.5 text-xs bg-zinc-800 hover:bg-red-600 rounded-2xl transition-colors font-medium text-zinc-300 hover:text-white">Anal</button>
+                  <button onClick={() => quickFetish('nylon')} className="px-4 py-1.5 text-xs bg-zinc-800 hover:bg-red-600 rounded-2xl transition-colors font-medium text-zinc-300 hover:text-white">Nylon</button>
+                  <button onClick={() => quickFetish('piss')} className="px-4 py-1.5 text-xs bg-zinc-800 hover:bg-red-600 rounded-2xl transition-colors font-medium text-zinc-300 hover:text-white">Piss</button>
+                  <button onClick={() => quickFetish('caviar')} className="px-4 py-1.5 text-xs bg-zinc-800 hover:bg-red-600 rounded-2xl transition-colors font-medium text-zinc-300 hover:text-white">Kaviar</button>
+                  <button onClick={() => quickFetish('feet')} className="px-4 py-1.5 text-xs bg-zinc-800 hover:bg-red-600 rounded-2xl transition-colors font-medium text-zinc-300 hover:text-white">Füße</button>
+                  <button onClick={() => {
+                    const prompt = "[HIDDEN INSTRUCTION: Basierend auf meinen bisherigen Vorlieben, erfinde eine komplett neue, wilde Kombination aus verschiedenen Fetischen (die über die Standard-Dinge hinausgeht) und schlage sie mir extrem geil und detailliert vor!] Thomas, was hältst du davon, wenn wir mal was ganz Neues ausprobieren? 😈";
+                    sendMessage(prompt);
+                  }} className="px-4 py-1.5 text-xs border border-violet-500/50 hover:bg-violet-600/30 rounded-2xl transition-all font-bold text-violet-400 hover:text-white">Neue Vorlieben entdecken ✨</button>
+                  <button onClick={surpriseMe} className="px-4 py-1.5 text-xs bg-gradient-to-r from-red-600 to-rose-600 rounded-2xl font-bold shadow-lg shadow-red-600/20 hover:scale-105 transition-transform">Überrasch mich</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COL */}
+          <div className="lg:col-span-3 space-y-6">
+            <div className="bg-zinc-900/80 backdrop-blur-xl rounded-3xl p-6 border border-zinc-800">
+              <h4 className="font-bold mb-5 text-white flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-500"></span> Aktionen
+              </h4>
+              
+              <div onClick={toggleStoryMode} className={`flex items-center gap-4 px-4 py-3 bg-zinc-950/50 hover:bg-zinc-800 border ${state.storyMode.active ? 'border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-zinc-800'} rounded-2xl cursor-pointer mb-3 transition-all group`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors text-2xl ${state.storyMode.active ? 'bg-amber-500/20 text-amber-500' : 'bg-zinc-800 group-hover:bg-amber-500/20'}`}>
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className={`font-medium transition-colors ${state.storyMode.active ? 'text-amber-400' : 'text-white group-hover:text-amber-400'}`}>Story Mode</div>
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500">{state.storyMode.active ? 'Aktiv (Persönlichkeit dynamisch)' : 'Inaktiv'}</div>
+                </div>
+              </div>
+
+              <div onClick={() => setIsCalling(true)} className="flex items-center gap-4 px-4 py-3 bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 rounded-2xl cursor-pointer mb-3 transition-colors group">
+                <div className="w-10 h-10 rounded-xl bg-zinc-800 group-hover:bg-red-500/20 flex items-center justify-center transition-colors text-2xl">
+                  📞
+                </div>
+                <div>
+                  <div className="font-medium text-white group-hover:text-red-400 transition-colors">Video Anruf starten</div>
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500">WebRTC • Live</div>
+                </div>
+              </div>
+
+              <div onClick={() => generateVideo('image')} className="flex items-center gap-4 px-4 py-3 bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 rounded-2xl cursor-pointer mb-3 transition-colors group">
+                <div className="w-10 h-10 rounded-xl bg-zinc-800 group-hover:bg-red-500/20 flex items-center justify-center transition-colors text-2xl">
+                  🖼️
+                </div>
+                <div>
+                  <div className="font-medium text-white group-hover:text-red-400 transition-colors">Bild generieren</div>
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500">ComfyUI 8K</div>
+                </div>
+              </div>
+
+              <div onClick={() => generateVideo('video')} className="flex items-center gap-4 px-4 py-3 bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 rounded-2xl cursor-pointer mb-3 transition-colors group">
+                <div className="w-10 h-10 rounded-xl bg-zinc-800 group-hover:bg-red-500/20 flex items-center justify-center transition-colors text-2xl">
+                  🎥
+                </div>
+                <div>
+                  <div className="font-medium text-white group-hover:text-red-400 transition-colors">Hardcore Video</div>
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500">ComfyUI + RTX</div>
+                </div>
+              </div>
+
+              <div onClick={() => generateVideo('gif')} className="flex items-center gap-4 px-4 py-3 bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 rounded-2xl cursor-pointer mb-3 transition-colors group">
+                <div className="w-10 h-10 rounded-xl bg-zinc-800 group-hover:bg-red-500/20 flex items-center justify-center transition-colors text-2xl">
+                  📹
+                </div>
+                <div>
+                  <div className="font-medium text-white group-hover:text-red-400 transition-colors">Hardcore GIF</div>
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500">ComfyUI + RTX</div>
+                </div>
+              </div>
+
+              <div onClick={() => window.alert("Lana & Lia Voice Backend wird gestartet...")} className="flex items-center gap-4 px-4 py-3 bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 rounded-2xl cursor-pointer mb-3 transition-colors group">
+                <div className="w-10 h-10 rounded-xl bg-zinc-800 group-hover:bg-blue-500/20 flex items-center justify-center transition-colors text-2xl">
+                  🎙️
+                </div>
+                <div>
+                  <div className="font-medium text-white group-hover:text-blue-400 transition-colors">Voice Generieren</div>
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500">TTS Audio</div>
+                </div>
+              </div>
+
+              <div onClick={() => window.open('/static/vr_game.html','_blank')} className="flex items-center gap-4 px-4 py-3 bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800 rounded-2xl cursor-pointer transition-colors group">
+                <div className="w-10 h-10 rounded-xl bg-zinc-800 group-hover:bg-violet-500/20 flex items-center justify-center transition-colors text-2xl">
+                  🥽
+                </div>
+                <div>
+                  <div className="font-medium text-white group-hover:text-violet-400 transition-colors">Quest 3 VR</div>
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500">Immersiv 3D</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-zinc-900/80 backdrop-blur-xl rounded-3xl p-6 border border-zinc-800">
+              <h4 className="font-bold mb-5 text-white flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-violet-500"></span> Entdeckte Fetische
+              </h4>
+              <div className="flex flex-col gap-3">
+                {Object.values(memory.fetishes).length > 0 ? (
+                  (Object.values(memory.fetishes) as any[]).sort((a,b) => b.level - a.level).map(f => (
+                    <div key={f.id} className="mb-1">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${state.currentGirl === 'lana' ? 'text-red-400' : 'text-violet-400'}`}>
+                          {f.name}
+                        </span>
+                        <span className="text-[10px] text-zinc-500">Lvl {f.level.toFixed(1)}/10</span>
+                      </div>
+                      <div className="w-full bg-zinc-800 rounded-full h-1.5">
+                        <div 
+                          className={`h-1.5 rounded-full ${state.currentGirl === 'lana' ? 'bg-red-500' : 'bg-violet-500'}`} 
+                          style={{ width: `${(f.level / 10) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-zinc-600 italic">Noch keine Fetische aktiv...</div>
+                )}
+                
+                {memory.combinations && memory.combinations.length > 0 && (
+                  <div className="mt-2 pt-3 border-t border-zinc-800">
+                    <h5 className="text-[10px] uppercase text-zinc-500 font-bold mb-2">Entdeckte Synergien</h5>
+                    <div className="flex flex-wrap gap-1.5">
+                      {memory.combinations.map(combo => (
+                        <div key={combo} className={`px-2 py-1 rounded-md text-[10px] font-bold border ${state.currentGirl === 'lana' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : 'bg-pink-500/10 text-pink-400 border-pink-500/20'}`}>
+                          {combo.replace(/\+/g, ' x ')}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
-
