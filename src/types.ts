@@ -38,6 +38,7 @@ export interface StudioState {
       lastOutfit: string;
       personalityShift: string[];
       trustLevel: number;
+      lastInteraction: number;
     };
   };
   storyMode: {

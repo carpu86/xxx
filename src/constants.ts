@@ -50,3 +50,14 @@ export const SYSTEM_PROMPT = `
 8. KEIN Vaginal-Sex (absolut verboten). Nur Anal, Nylon, Kaviar, Piss, Füße erlaubt.
 `;
 
+export const DECAY_CONFIG = {
+  // Reduction per hour of inactivity
+  BASE_DECAY_RATE: 0.05, 
+  // Higher level means slower decay
+  // level = level - (BASE_DECAY_RATE * (1 / (1 + level))) * hoursElapsed
+  
+  // Total inactivity time after which trust starts to drop (in hours)
+  TRUST_DECAY_THRESHOLD: 24,
+  TRUST_DECAY_RATE: 0.2 
+};
+

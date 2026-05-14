@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CharacterId, Message, StudioState } from '../types';
-import { CHARACTERS, FETISHES } from '../constants';
+import { CharacterId, Message, StudioState, FetishData } from '../types';
+import { CHARACTERS, FETISHES, DECAY_CONFIG } from '../constants';
 
 const STORAGE_KEY = 'lana_lia_studio_v1';
 
@@ -12,8 +12,8 @@ const initialState: StudioState = {
   currentGirl: 'lana',
   messages: [],
   memory: {
-    lana: { addiction: 0, discovered: [], fetishes: {}, combinations: [], lastOutfit: "Schwarze Nahtnylon + High Heels", personalityShift: [], trustLevel: 50 },
-    lia: { addiction: 0, discovered: [], fetishes: {}, combinations: [], lastOutfit: "Weiße Nylon + Overknees", personalityShift: [], trustLevel: 50 }
+    lana: { addiction: 0, discovered: [], fetishes: {}, combinations: [], lastOutfit: "Schwarze Nahtnylon + High Heels", personalityShift: [], trustLevel: 50, lastInteraction: Date.now() },
+    lia: { addiction: 0, discovered: [], fetishes: {}, combinations: [], lastOutfit: "Weiße Nylon + Overknees", personalityShift: [], trustLevel: 50, lastInteraction: Date.now() }
   },
   storyMode: {
     active: false,
@@ -34,6 +34,7 @@ const migrateState = (state: any): StudioState => {
     if (!newState.memory[girl].combinations) newState.memory[girl].combinations = [];
     if (!newState.memory[girl].personalityShift) newState.memory[girl].personalityShift = [];
     if (newState.memory[girl].trustLevel === undefined) newState.memory[girl].trustLevel = 50;
+    if (newState.memory[girl].lastInteraction === undefined) newState.memory[girl].lastInteraction = Date.now();
   });
   return newState;
 };
@@ -45,6 +46,75 @@ export function useStudio() {
   });
 
   const [isTyping, setIsTyping] = useState(false);
+
+  // Apply decay on mount and periodically
+  useEffect(() => {
+    const applyDecay = () => {
+      const now = Date.now();
+      setState(prev => {
+        const newMemory = { ...prev.memory };
+        let changed = false;
+
+        (['lana', 'lia'] as const).forEach(girl => {
+          const girlMem = { ...newMemory[girl] };
+          const hoursSinceLastInteraction = (now - girlMem.lastInteraction) / (1000 * 60 * 60);
+
+          // 1. Fetish Decay
+          const newFetishes = { ...girlMem.fetishes };
+          let fetishChanged = false;
+          Object.keys(newFetishes).forEach(fetishId => {
+            const fetish = newFetishes[fetishId];
+            const hoursSinceLastTrigger = (now - fetish.lastTriggered) / (1000 * 60 * 60);
+            
+            if (hoursSinceLastTrigger > 0.01) { // Only decay if more than ~36 seconds passed to avoid tiny updates
+              // Formula: decay rate is slower for higher levels
+              const decayAmount = (DECAY_CONFIG.BASE_DECAY_RATE * (1 / (1 + fetish.level))) * hoursSinceLastTrigger;
+              const newLevel = Math.max(0, fetish.level - decayAmount);
+              
+              if (Math.abs(newLevel - fetish.level) > 0.001) {
+                newFetishes[fetishId] = { ...fetish, level: Number(newLevel.toFixed(4)) };
+                fetishChanged = true;
+                changed = true;
+              }
+            }
+          });
+
+          // 2. Trust Decay
+          if (hoursSinceLastInteraction > DECAY_CONFIG.TRUST_DECAY_THRESHOLD) {
+            const hoursOverThreshold = hoursSinceLastInteraction - DECAY_CONFIG.TRUST_DECAY_THRESHOLD;
+            const trustReduction = hoursOverThreshold * DECAY_CONFIG.TRUST_DECAY_RATE;
+            const newTrust = Math.max(0, girlMem.trustLevel - trustReduction);
+            if (Math.abs(newTrust - girlMem.trustLevel) > 0.01) {
+              girlMem.trustLevel = Number(newTrust.toFixed(2));
+              changed = true;
+            }
+
+            // 3. Personality Fade (Oldest memories fade first)
+            // One shift removed every 48 hours of total silence
+            const shiftsToFade = Math.floor(hoursSinceLastInteraction / 48);
+            if (shiftsToFade > 0 && girlMem.personalityShift.length > 0) {
+              const originalLength = girlMem.personalityShift.length;
+              girlMem.personalityShift = girlMem.personalityShift.slice(shiftsToFade);
+              if (girlMem.personalityShift.length !== originalLength) {
+                changed = true;
+              }
+            }
+          }
+
+          if (fetishChanged) {
+            girlMem.fetishes = newFetishes;
+          }
+          newMemory[girl] = girlMem;
+        });
+
+        return changed ? { ...prev, memory: newMemory } : prev;
+      });
+    };
+
+    applyDecay();
+    const interval = setInterval(applyDecay, 1000 * 60 * 5); // Check every 5 minutes
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -131,7 +201,8 @@ export function useStudio() {
         [state.currentGirl]: {
           ...prev.memory[state.currentGirl],
           fetishes: updatedFetishes,
-          combinations: updatedCombinations
+          combinations: updatedCombinations,
+          lastInteraction: Date.now()
         }
       }
     }));
