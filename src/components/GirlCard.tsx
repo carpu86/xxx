@@ -33,7 +33,7 @@ export default function GirlCard({ girl }: Props) {
       <div className="w-full text-center">
         <p className="text-white font-semibold text-sm truncate">{girl.name}</p>
         {girl.lastMessage && (
-          <p className="text-zinc-500 text-xs mt-0.5 truncate max-w-[12ch] mx-auto">
+          <p className="text-zinc-500 text-xs mt-0.5 line-clamp-1 w-full text-center px-1">
             {girl.lastMessage.length > 60 ? girl.lastMessage.slice(0, 60) + '…' : girl.lastMessage}
           </p>
         )}

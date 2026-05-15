@@ -9,6 +9,12 @@ import {
   removeToken,
 } from './api';
 
+const RECONNECT_DELAY_MS = 3000;
+
+function genId(): string {
+  return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AuthState {
@@ -116,7 +122,7 @@ export function useChat(girlId: string) {
           setIsTyping(false);
           setMessages((prev) => [
             ...prev,
-            { id: Date.now().toString(), sender: 'girl', text: data.content, timestamp: Date.now() },
+            { id: genId(), sender: 'girl', text: data.content, timestamp: Date.now() },
           ]);
         } else if (data.type === 'error') {
           setIsTyping(false);
@@ -126,8 +132,7 @@ export function useChat(girlId: string) {
 
     ws.onclose = () => {
       setConnected(false);
-      // Reconnect after 3 seconds
-      reconnectTimer.current = setTimeout(() => connect(), 3000);
+      reconnectTimer.current = setTimeout(() => connect(), RECONNECT_DELAY_MS);
     };
 
     ws.onerror = () => ws.close();
@@ -144,15 +149,20 @@ export function useChat(girlId: string) {
   const send = useCallback(
     async (text: string) => {
       const userMsg: ChatMessage = {
-        id: Date.now().toString(),
+        id: genId(),
         sender: 'user',
         text,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, userMsg]);
 
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'message', girl_id: girlId, content: text }));
+      const ws = wsRef.current;
+      if (ws?.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify({ type: 'message', girl_id: girlId, content: text }));
+        } catch {
+          // WS closed between check and send — fall through to HTTP
+        }
       } else {
         // Fallback to HTTP if WS not connected
         setIsTyping(true);
@@ -160,12 +170,12 @@ export function useChat(girlId: string) {
           const result = await sendChat(girlId, text);
           setMessages((prev) => [
             ...prev,
-            { id: (Date.now() + 1).toString(), sender: 'girl', text: result.reply, timestamp: Date.now() },
+            { id: genId(), sender: 'girl', text: result.reply, timestamp: Date.now() },
           ]);
         } catch {
           setMessages((prev) => [
             ...prev,
-            { id: (Date.now() + 1).toString(), sender: 'girl', text: '…', timestamp: Date.now() },
+            { id: genId(), sender: 'girl', text: 'Nachricht konnte nicht gesendet werden.', timestamp: Date.now() },
           ]);
         } finally {
           setIsTyping(false);
