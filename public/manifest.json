@@ -1,14 +1,14 @@
 {
-  "name": "Lana & Lia - Thomas Studio",
-  "short_name": "LanaStudio",
+  "name": "Lana KI",
+  "short_name": "Lana",
+  "description": "AI Companion Platform",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#ef4444",
+  "background_color": "#0a0a0a",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
   "icons": [
-    {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMDkwOTBiIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMjAwIiBkeT0iLjE1ZW0iIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPgrwn5SlCjwvdGV4dD48L3N2Zz4=",
-      "sizes": "512x512",
-      "type": "image/svg+xml"
-    }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
