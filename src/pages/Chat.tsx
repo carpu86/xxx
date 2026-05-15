@@ -13,6 +13,8 @@ interface ChatProps {
   onGenerateImage: (prompt: string) => Promise<void>
 }
 
+const DEFAULT_IMAGE_PROMPT = 'Portrait von Lana KI Companion'
+
 export function Chat({ girl, messages, isTyping, onBack, onSend, onGenerateImage }: ChatProps) {
   const [input, setInput] = useState('')
   const endRef = useRef<HTMLDivElement | null>(null)
@@ -73,7 +75,7 @@ export function Chat({ girl, messages, isTyping, onBack, onSend, onGenerateImage
           />
           <button
             type="button"
-            onClick={() => onGenerateImage(input || 'Portrait von Lana KI Companion')}
+            onClick={() => onGenerateImage(input || DEFAULT_IMAGE_PROMPT)}
             className="rounded-xl border border-neutral-700 p-2 text-neutral-300 hover:border-violet-500 hover:text-violet-300"
           >
             <ImageIcon className="h-4 w-4" />

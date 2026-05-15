@@ -64,7 +64,9 @@ export const api = {
     }),
 }
 
-export function createWebSocket(_userId: string): WebSocket {
+export function createWebSocket(userId: string): WebSocket {
   const token = localStorage.getItem('lana_token')
-  return new WebSocket(`wss://gateway.lana-ki.de/ws?token=${encodeURIComponent(token ?? '')}`)
+  return new WebSocket(
+    `wss://gateway.lana-ki.de/ws?token=${encodeURIComponent(token ?? '')}&user_id=${encodeURIComponent(userId)}`,
+  )
 }

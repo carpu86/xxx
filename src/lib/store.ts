@@ -15,7 +15,10 @@ export interface ChatMessage {
   timestamp: number
 }
 
-const uid = () => Math.random().toString(36).slice(2)
+const generateId = () => crypto.randomUUID()
+const INITIAL_RECONNECT_DELAY = 1000
+const MAX_RECONNECT_DELAY = 30000
+const MAX_RECONNECT_EXPONENT = 10
 
 export function useAuth() {
   const [auth, setAuth] = useState<AuthState>(() => ({
@@ -57,12 +60,17 @@ export function useGirls() {
   useEffect(() => {
     let mounted = true
     api.getGirls()
-      .then((r) => (r.ok ? r.json() : []))
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error('Girls konnten nicht geladen werden')
+        }
+        return r.json()
+      })
       .then((data) => {
         if (!mounted) return
         const list = Array.isArray(data) ? data : data.girls ?? []
         const mapped = list.map((girl: Partial<GirlSlot>) => ({
-          id: girl.id ?? uid(),
+          id: girl.id ?? generateId(),
           name: girl.name ?? 'Neue Begleiterin',
           moodEmoji: girl.moodEmoji ?? '✨',
           online: Boolean(girl.online),
@@ -74,7 +82,11 @@ export function useGirls() {
           setActiveGirl((current) => current ?? mapped[0].id)
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (mounted) {
+          setGirls([])
+        }
+      })
 
     return () => {
       mounted = false
@@ -82,12 +94,17 @@ export function useGirls() {
   }, [])
 
   const createGirl = useCallback(async (sheet: CharacterSheet) => {
-    if (sheet.age < 18) return null
+    if (sheet.age < 18) {
+      throw new Error('Alter muss mindestens 18 sein')
+    }
 
     const response = await api.createGirl(sheet)
+    if (!response.ok) {
+      throw new Error('Begleiterin konnte nicht erstellt werden')
+    }
     const data = await response.json().catch(() => ({}))
     const created: GirlSlot = {
-      id: data.id ?? uid(),
+      id: data.id ?? generateId(),
       name: data.name ?? sheet.name,
       moodEmoji: data.moodEmoji ?? '💜',
       online: Boolean(data.online ?? true),
@@ -95,7 +112,7 @@ export function useGirls() {
       unreadCount: 0,
     }
 
-    setGirls((prev) => [...prev.slice(0, 8), created])
+    setGirls((prev) => [...prev, created].slice(0, 9))
     setActiveGirl(created.id)
     return created
   }, [])
@@ -116,7 +133,7 @@ export function useChat(activeGirlId: string | null) {
       if (!activeGirlId || !message.trim()) return
 
       const userMessage: ChatMessage = {
-        id: uid(),
+        id: generateId(),
         girlId: activeGirlId,
         sender: 'user',
         text: message,
@@ -129,7 +146,7 @@ export function useChat(activeGirlId: string | null) {
         const response = await api.sendMessage(activeGirlId, message)
         const data = await response.json().catch(() => ({}))
         const girlMessage: ChatMessage = {
-          id: uid(),
+          id: generateId(),
           girlId: activeGirlId,
           sender: 'girl',
           text: data.reply ?? data.message ?? 'Ich bin bei dir 💜',
@@ -176,7 +193,7 @@ export function useWebSocket(userId: string | null, onMessage: (message: ChatMes
           const data = JSON.parse(event.data)
           if (!data?.girl_id || !data?.message) return
           onMessage({
-            id: uid(),
+            id: generateId(),
             girlId: data.girl_id,
             sender: 'girl',
             text: data.message,
@@ -191,7 +208,8 @@ export function useWebSocket(userId: string | null, onMessage: (message: ChatMes
         setIsConnected(false)
         if (!active) return
 
-        const delay = Math.min(1000 * 2 ** reconnectRef.current, 30000)
+        const cappedAttempt = Math.min(reconnectRef.current, MAX_RECONNECT_EXPONENT)
+        const delay = Math.min(INITIAL_RECONNECT_DELAY * 2 ** cappedAttempt, MAX_RECONNECT_DELAY)
         reconnectRef.current += 1
         timeoutRef.current = window.setTimeout(connect, delay)
       }

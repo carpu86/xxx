@@ -8,7 +8,8 @@ interface GirlCardProps {
 
 export function GirlCard({ girl, onClick }: GirlCardProps) {
   const initials = girl.name
-    .split(' ')
+    .split(/\s+/)
+    .filter(Boolean)
     .map((part) => part[0])
     .join('')
     .slice(0, 2)

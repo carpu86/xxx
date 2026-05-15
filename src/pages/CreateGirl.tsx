@@ -7,6 +7,8 @@ interface CreateGirlProps {
 }
 
 const templates = ['Freundlich & verspielt', 'Empathisch & ruhig', 'Mutig & direkt']
+const MIN_AGE = 18
+const MAX_AGE = 99
 
 export function CreateGirl({ onCreate, onCancel }: CreateGirlProps) {
   const [step, setStep] = useState(1)
@@ -14,7 +16,7 @@ export function CreateGirl({ onCreate, onCancel }: CreateGirlProps) {
   const [error, setError] = useState('')
   const [sheet, setSheet] = useState<CharacterSheet>({
     name: '',
-    age: 18,
+    age: MIN_AGE,
     description: '',
     appearance: { hair: '', eyes: '', bodyType: '' },
     personality: '',
@@ -22,14 +24,14 @@ export function CreateGirl({ onCreate, onCancel }: CreateGirlProps) {
   })
 
   const canNext = useMemo(() => {
-    if (step === 1) return Boolean(sheet.name && sheet.description && sheet.age >= 18)
+    if (step === 1) return Boolean(sheet.name && sheet.description && sheet.age >= MIN_AGE)
     if (step === 2) return Boolean(sheet.appearance.hair && sheet.appearance.eyes && sheet.appearance.bodyType)
     if (step === 3) return Boolean(sheet.personality)
     return true
   }, [sheet, step])
 
   const submit = async () => {
-    if (sheet.age < 18) {
+    if (sheet.age < MIN_AGE) {
       setError('Alter muss mindestens 18 sein.')
       return
     }
@@ -62,18 +64,27 @@ export function CreateGirl({ onCreate, onCancel }: CreateGirlProps) {
             <label className="text-sm text-neutral-300">Alter: {sheet.age}</label>
             <input
               type="range"
-              min="18"
-              max="99"
+              min={MIN_AGE}
+              max={MAX_AGE}
               value={sheet.age}
               onChange={(event) => setSheet((prev) => ({ ...prev, age: Number(event.target.value) }))}
               className="w-full accent-violet-500"
             />
             <input
               type="number"
-              min="18"
-              max="99"
+              min={MIN_AGE}
+              max={MAX_AGE}
               value={sheet.age}
-              onChange={(event) => setSheet((prev) => ({ ...prev, age: Number(event.target.value) || 18 }))}
+              onChange={(event) =>
+                setSheet((prev) => {
+                  const nextAge = Number(event.target.value)
+                  if (Number.isNaN(nextAge)) {
+                    return { ...prev, age: prev.age }
+                  }
+                  const clampedAge = Math.max(MIN_AGE, Math.min(MAX_AGE, nextAge))
+                  return { ...prev, age: clampedAge }
+                })
+              }
               className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
             />
           </div>
@@ -137,7 +148,7 @@ export function CreateGirl({ onCreate, onCancel }: CreateGirlProps) {
           <select
             value={sheet.voice}
             onChange={(event) =>
-              setSheet((prev) => ({ ...prev, voice: event.target.value === 'thorsten' ? 'thorsten' : 'kerstin' }))
+              setSheet((prev) => ({ ...prev, voice: event.target.value as 'kerstin' | 'thorsten' }))
             }
             className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
           >

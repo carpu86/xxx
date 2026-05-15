@@ -8,7 +8,7 @@ import { Stream } from '@/src/pages/Stream'
 import { api } from '@/src/lib/api'
 import { useAuth, useChat, useGirls, useWebSocket } from '@/src/lib/store'
 
-type Page = 'login' | 'home' | 'chat' | 'create' | 'stream' | 'admin'
+type Page = NavPage | 'login' | 'admin'
 
 export default function App() {
   const [page, setPage] = useState<Page>('login')
